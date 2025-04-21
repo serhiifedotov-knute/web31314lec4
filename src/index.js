@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const {DataSource} = require('typeorm')
 
 console.log(1);
 
@@ -10,6 +11,41 @@ server.use(express.json());
 // JSON - javascript object notation
 
 const PORT = 8080;
+
+
+
+const AppDataSource = new DataSource({
+    type: "postgres",
+    host: "localhost",
+    port: 5432,
+    username: "testapril",
+    password: process.env.DB_PASSWORD,
+    database: "db3april",
+    synchronize: false,
+    logging: true,
+    entities: [],
+    subscribers: [],
+    migrations: [],
+})
+
+
+// simple data base connection
+AppDataSource.initialize().then(()=>{
+    console.log(`Successfully connected`);
+
+    AppDataSource.manager.query(`
+    select count(1)
+    from game_user 
+    join purchased_game 
+    on purchased_game.user_id = game_user.id
+    where game_user.name = 'Yaroslav'
+	`).then(dbResponse=>{
+	    console.log(dbResponse);
+	});
+
+}).catch(error=>{
+    console.log(`Failed connected: ${error}`);
+});
 
 
 // http://localhost:8080
