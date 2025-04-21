@@ -1,9 +1,13 @@
 const express = require('express');
+const cors = require('cors');
 
 console.log(1);
 
 
 const server = express();
+server.use(cors());
+server.use(express.json());
+// JSON - javascript object notation
 
 const PORT = 8080;
 
@@ -36,12 +40,66 @@ const PORT = 8080;
 // DELETE -	for deleting data
 //
 
-const groups = Array(20).fill(0).map((_,idx)=>`group_${idx}`).map(groupId=> ({groupId}));
+const groups = Array(10).fill(0).map((_,idx)=>`group_${idx}`).map(groupId=> ({groupId}));
 
 // endpoint - кінечна точка
 server.get('/groups',(request, response)=>{
     response.json(groups);
 });
+
+// request = {
+// body = структура у форматі JSON 
+// request.path = шлях запиту
+// request.query = query parameters here 
+
+server.post('/groups', (request, response)=>{
+    console.log(request.body);
+    groups.push(request.body);
+    response.send('ok');
+});
+
+// ..../groups?groupId=3-13
+server.delete('/groups', (request, response)=>{
+    console.log(request.query.groupId);
+
+    if(request.query.groupId == undefined){
+	response.status(400).send(`groupId query paramter doesn't exist`);
+	return;
+    }
+
+    const indexToDelete = groups.findIndex(gr=>gr.groupId == request.query.groupId);
+    // if not found index = -1
+    if(indexToDelete >= 0){
+	groups.splice(indexToDelete,1);
+	response.send('deleted successfully');
+    }
+    response.status(404).send('cannot find element');
+});
+
+server.get('/fun',(_,response)=>{
+    response.status(200).json({ errorCode:500, errorMessage:'very bad happened'});
+});
+
+// Status codes 
+// 200 - ok 
+// 201 - created sucessfully 
+// 2xx - GOOD 
+//
+// 304 - redirect 
+// 3xx
+//
+//
+// controlled and expected error
+// 400 - bad request 
+// 404 - item not found
+// 401 - authorization
+// 429 - DDOS
+//
+//
+// Unexpected
+// 500 - unexpected error
+// 503 - server cannot answered
+// 5xx - VERY BAD
 
 server.listen(PORT, ()=>{
     console.log(`Server started on http://localhost:${PORT}`);
