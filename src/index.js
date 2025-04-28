@@ -1,51 +1,59 @@
 const express = require('express');
 const cors = require('cors');
-const {DataSource} = require('typeorm')
 
 console.log(1);
 
+function loggerMiddleware(req,res,next){
+    console.log(req.path);
+    next();
+}
+
+const REQUESTS_LIMIT = 2;
+const requestsPerSecond = {};
+ 
+ 
+const antiDDOSMiddleware = (req,res,next) =>{
+    const ip = req.ip;
+    if(requestsPerSecond[ip] == undefined){
+requestsPerSecond[ip] = [];
+    }
+ 
+    const ipRequests = requestsPerSecond[ip];
+ 
+    ipRequests.push(new Date().getTime());
+ 
+    if(ipRequests < REQUESTS_LIMIT){
+	next();
+	return;
+    }
+ 
+    const lastRequest = ipRequests[ipRequests.length - 1];
+    const firstRequest = ipRequests[ipRequests.length - 1 - REQUESTS_LIMIT];
+ 
+    const diffInMilliseconds =  lastRequest - firstRequest;
+ 
+    if(diffInMilliseconds < 1000){
+	res.status(429).send('SPAMMER');
+	return;
+    }
+    next();
+};
+
+
+
 
 const server = express();
+
 server.use(cors());
 server.use(express.json());
+server.use(antiDDOSMiddleware);
+server.use(loggerMiddleware);
 // JSON - javascript object notation
 
 const PORT = 8080;
 
 
 
-const AppDataSource = new DataSource({
-    type: "postgres",
-    host: "localhost",
-    port: 5432,
-    username: "testapril",
-    password: process.env.DB_PASSWORD,
-    database: "db3april",
-    synchronize: false,
-    logging: true,
-    entities: [],
-    subscribers: [],
-    migrations: [],
-})
-
-
-// simple data base connection
-AppDataSource.initialize().then(()=>{
-    console.log(`Successfully connected`);
-
-    AppDataSource.manager.query(`
-    select count(1)
-    from game_user 
-    join purchased_game 
-    on purchased_game.user_id = game_user.id
-    where game_user.name = 'Yaroslav'
-	`).then(dbResponse=>{
-	    console.log(dbResponse);
-	});
-
-}).catch(error=>{
-    console.log(`Failed connected: ${error}`);
-});
 
 
 // http://localhost:8080
@@ -112,7 +120,7 @@ server.delete('/groups', (request, response)=>{
     response.status(404).send('cannot find element');
 });
 
-server.get('/fun',(_,response)=>{
+server.get('/fun', antiDDOSMiddleware, (_,response)=>{
     response.status(200).json({ errorCode:500, errorMessage:'very bad happened'});
 });
 
