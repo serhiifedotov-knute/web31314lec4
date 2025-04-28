@@ -8,8 +8,10 @@ function loggerMiddleware(req,res,next){
     next();
 }
 
-const REQUESTS_LIMIT = 2;
+const REQUESTS_LIMIT = 5;
 const requestsPerSecond = {};
+
+const benchMarking = {};
  
  
 const antiDDOSMiddleware = (req,res,next) =>{
@@ -39,6 +41,20 @@ requestsPerSecond[ip] = [];
     next();
 };
 
+function benchMarkingMiddleware(req,_,next){
+    const beforeTime = new Date().getTime();
+    next();
+    const afterTime = new Date().getTime();
+
+    if(!benchMarking[req.path]){
+	benchMarking[req.path] = [];
+    }
+
+    benchMarking[req.path].push(afterTime - beforeTime);
+    const total = benchMarking[req.path].reduce((acc,n)=>acc+n,0);
+    console.log(`Req: ${req.path}, total:${total} Avg: ${total/benchMarking[req.path].length}`);
+}
+
 
 
 
@@ -48,6 +64,7 @@ server.use(cors());
 server.use(express.json());
 server.use(antiDDOSMiddleware);
 server.use(loggerMiddleware);
+server.use(benchMarkingMiddleware);
 // JSON - javascript object notation
 
 const PORT = 8080;
